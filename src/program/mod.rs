@@ -24,8 +24,9 @@ impl Program {
     pub fn run(mut self) {
         let mut address: usize = 0;
         while let Some(instruction) = self.instructions.get(address) {
-            instruction.run(&mut self.registers, &mut address);
-            address += 1;
+            if instruction.run(&mut self.registers, &mut address) {
+                address += 1;
+            }
         }
 
         println!("{:?}", self.registers);

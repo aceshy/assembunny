@@ -29,11 +29,13 @@ pub struct JumpNotZero {
 }
 
 impl Copy {
-    fn run(&self, registers: &mut [i32; 4]) {
+    fn run(&self, registers: &mut [i32; 4]) -> bool {
         registers[self.destination] = match self.source {
             ArgumentType::Number(value) => value,
             ArgumentType::Register(register_index) => registers[register_index],
         };
+
+        true
     }
 
     fn parse(source: &str, destination: &str) -> Self {
@@ -50,8 +52,9 @@ impl Copy {
 }
 
 impl Increment {
-    fn run(&self, registers: &mut [i32; 4]) {
+    fn run(&self, registers: &mut [i32; 4]) -> bool {
         registers[self.target] += 1;
+        true
     }
 
     fn parse(target: &str) -> Self {
@@ -67,8 +70,9 @@ impl Increment {
 }
 
 impl Decrement {
-    fn run(&self, registers: &mut [i32; 4]) {
+    fn run(&self, registers: &mut [i32; 4]) -> bool {
         registers[self.target] -= 1;
+        true
     }
 
     fn parse(target: &str) -> Self {
@@ -84,7 +88,7 @@ impl Decrement {
 }
 
 impl JumpNotZero {
-    fn run(&self, registers: &[i32; 4], address: &mut usize) {
+    fn run(&self, registers: &[i32; 4], address: &mut usize) -> bool {
         if match self.target {
             ArgumentType::Number(value) => value != 0,
             ArgumentType::Register(register_index) => registers[register_index] != 0,
@@ -99,8 +103,10 @@ impl JumpNotZero {
             } else {
                 *address -= jump_distance.unsigned_abs() as usize;
             }
-            *address -= 1;
+            return false;
         };
+
+        true
     }
 
     fn parse(target: &str, jump_distance: &str) -> Self {
@@ -120,13 +126,13 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn run(&self, registers: &mut [i32; 4], address: &mut usize) {
+    pub fn run(&self, registers: &mut [i32; 4], address: &mut usize) -> bool {
         match self {
-            Instruction::Copy(instruction) => &instruction.run(registers),
-            Instruction::Increment(instruction) => &instruction.run(registers),
-            Instruction::Decrement(instruction) => &instruction.run(registers),
-            Instruction::JumpNotZero(instruction) => &instruction.run(registers, address),
-        };
+            Instruction::Copy(instruction) => instruction.run(registers),
+            Instruction::Increment(instruction) => instruction.run(registers),
+            Instruction::Decrement(instruction) => instruction.run(registers),
+            Instruction::JumpNotZero(instruction) => instruction.run(registers, address),
+        }
     }
 
     fn parse_argument_type(argument: &str) -> ArgumentType {
@@ -137,7 +143,7 @@ impl Instruction {
             _ => ArgumentType::Number(
                 argument
                     .parse::<i32>()
-                    .expect(&format!("{} is not a valid input value", argument)),
+                    .unwrap_or_else(|_| panic!("{} is not a valid input value", argument)),
             ),
         }
     }
@@ -147,7 +153,7 @@ impl Instruction {
         match input[0] {
             "cpy" => Instruction::Copy(Copy::parse(
                 input.get(1).expect("Copy requires a source to copy"),
-                input.get(2).expect("Copy requires a destiantion register"),
+                input.get(2).expect("Copy requires a destination register"),
             )),
             "inc" => Instruction::Increment(Increment::parse(
                 input

@@ -1,0 +1,8 @@
+# rust
+/target
+
+# vscode
+/.vscode
+
+# project
+/inputs
